@@ -7,40 +7,34 @@
       <el-breadcrumb-item>用户列表</el-breadcrumb-item>
     </el-breadcrumb>
     <!-- 搜索框 -->
-     <el-input v-model="query" placeholder="请输入内容" class="input-with-select">
-     </el-input>
-     <el-button class="searBtn1" icon="el-icon-search"></el-button>
-     <!-- 添加用户 -->
-     <el-button @click="showAddDialog" type="primary" class="addBtn">添加用户</el-button>
-     <!-- 表格 -->
-      <el-table
-    :data="userList"
-    stripe
-    style="width: 100%">
-      <el-table-column prop="username" label="姓名">
-      </el-table-column>
-      <el-table-column prop="email" label="邮箱">
-      </el-table-column>
-      <el-table-column prop="mobile" label="电话">
-      </el-table-column>
+    <el-input placeholder="请输入内容" v-model="query" class="input-with-select">
+      <el-button slot="append" icon="el-icon-search"></el-button>
+    </el-input>
+    <!-- 添加用户 -->
+    <el-button @click="showAddDialog" plain type="success" class="btn1">添加用户</el-button>
+    <!-- 表格 -->
+    <el-table :data="userList">
+      <el-table-column label="姓名" prop="username"></el-table-column>
+      <el-table-column label="邮箱" prop="email"></el-table-column>
+      <el-table-column label="电话" prop="mobile"></el-table-column>
       <el-table-column label="用户状态">
-        <!-- 用作用域插槽可以获取到  row  colunm  $index  store   -->
-        <template>
-          <el-switch @change="changeState(obj.row.id,obj.row.mg_state)" v-model="obj.row.mg_state" active-color="#13ce66" inactive-color="#ff4949"></el-switch>
+        <template v-slot:default="obj">
+          <el-switch
+          @change="changeState(obj.row.id,obj.row.mg_state)"
+            v-model="obj.row.mg_state"
+            active-color="#13ce66"
+            inactive-color="#ff4949">
+          </el-switch>
         </template>
       </el-table-column>
       <el-table-column label="操作">
-        <template v-slot:default="{row}">
-          <!-- 编辑按钮 -->
-          <el-button @click="showEditDialog(row)" type="primary" icon="el-icon-edit" plain size="small"></el-button>
-          <!-- 删除按钮 -->
-          <el-button @click="delUser(row.id)" type="danger" icon="el-icon-delete" plain size="small"></el-button>
-           <el-button @click="showAssignDialog(row)" type="success" icon="el-icon-check" plain size="small">分配角色</el-button>
-        </template>
+        <el-button plain size="small" type="primary" icon="el-icon-edit"></el-button>
+        <el-button plain size="small" type="danger" icon="el-icon-delete"></el-button>
+        <el-button plain size="small" type="success" icon="el-icon-check"></el-button>
       </el-table-column>
     </el-table>
     <!-- 分页 -->
-    <el-pagination
+     <el-pagination
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
       :current-page="pagenum"
@@ -49,29 +43,73 @@
       layout="total, sizes, prev, pager, next, jumper"
       :total="total">
     </el-pagination>
+
+    <!-- 对话框 -->
+    <el-dialog title="添加用户" :visible.sync="dialogFormVisible" width="40%">
+      <el-form :model="form" ref="form" label-width="80px" :rules="rules">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="form.username"></el-input>
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="form.password"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="form.email"></el-input>
+        </el-form-item>
+        <el-form-item label="手机" prop="mobile">
+          <el-input v-model="form.mobile"></el-input>
+        </el-form-item>
+      </el-form>
+      <template v-slot:footer >
+        <span class="dialog-footer">
+        <el-button @click="dialogFormVisible = false">取 消</el-button>
+        <el-button type="primary" @click="Adduser">确 定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 export default {
-  // 先渲染页面
-  creates () {
-    this.getUserList()
-  },
   data () {
     return {
       userList: [],
       query: '',
-      pagenum: 1, // 当前页
-      pagesize: 2, // 每页条数
+      pagenum: 1,
+      pagesize: 2,
       total: 0,
-      dialogVisible: false
+      dialogFormVisible: false,
+      form: {
+        username: '',
+        password: '',
+        email: '',
+        mobile: ''
+      },
+      rules: {
+        username: [
+          { required: true, message: '请输入用户名', trigger: ['blur', 'change'] },
+          { min: 3, max: 8, message: '长度在 3 到 8 个字符', trigger: ['blur', 'change'] }
+        ],
+        password: [
+          { required: true, message: '请输入密码', trigger: ['blur', 'change'] },
+          { min: 3, max: 8, message: '长度在 3 到 8 个字符', trigger: ['blur', 'change'] }
+        ],
+        email: [
+          { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
+        ],
+        mobile: [
+          { pattern: /^1(3|4|5|7|8)\d{9}$/, message: '请输入正确的手机号', trigger: ['blur', 'change'] }
+        ]
+      }
     }
   },
-  /* 首先渲染出表格数据 */
+  created () {
+    this.getUserList()
+  },
   methods: {
     async getUserList () {
-      const { data, meta } = await this.$axios.get('users', {
+      const { meta, data } = await this.$axios.get('users', {
         params: {
           query: this.query,
           pagenum: this.pagenum,
@@ -85,45 +123,29 @@ export default {
         this.$message.error(meta.msg)
       }
     },
-    // 处理每页条数变化
-    handleSizeChange (val) {
-      this.pagesize = val
-      this.pagenum = 1
-      this.getUserList()
-    },
-    // 处理当前页的变化
-    handleCurrentChange (val) {
-      this.pagenum = val
-      this.getUserList()
-    },
-    async changeState (id, flag) {
-      const { meta } = await this.$axios.put(`users/${id}/state/${flag}`)
-      if (meta.status === 200) {
-        this.$message.success(meta.msg)
-      } else {
-        this.$message.error(meta.msg)
-      }
-    },
+    /* 点击展示对话框，添加用户 */
     showAddDialog () {
-      this.dialogVisible = true
+      this.dialogFormVisible = true
+    },
+    /* 点击确定，新增用户信息 */
+    async Adduser () {
+      const { meta } = await this.$axios.post('users', this.form)
+      if (meta.status === 201) {
+
+      }
     }
   }
 }
 </script>
 
-<style lang='scss' scoped>
+<style lang="scss" scoped>
 .users{
   .input-with-select{
     width: 300px;
     margin-bottom: 10px;
-    border-radius: 0;
-  }
-  .searBtn1{
-    border-left:0;
-    border-radius: 0;
-  }
-  .addBtn{
-    margin-left: 10px;
-  }
+}
+.btn1{
+  margin-left: 20px;
+}
 }
 </style>

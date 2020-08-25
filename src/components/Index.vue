@@ -14,7 +14,7 @@
     <el-container>
       <el-aside width="200px">
         <el-menu
-
+          router
         default-active="defaultActive"
       class="el-menu-vertical-demo"
       background-color="#545c64"
